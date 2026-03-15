@@ -1,0 +1,49 @@
+Hello my old friend ,
+
+For your Reference , majority of my projects and ideas are inspired by problems I face in my day-to-day life .
+
+So , this idea is one of them .
+
+I am wondering on creating a Project/Tasks tracker web-Application .
+
+Problem statement : 
+There are many moments where I am selected in multiple hackathons , Internship programs and also completing my SAP Courses (in which I have enrolled months ago )
+
+
+Idea : 
+The idea to solve this problem is I can create a Web-Application  for Tracking my tasks, my projects. As you can imagine there is a process you need to follow for all the projects, hackathons, courses (as I have mentioned below):
+[
+-> I got enrolled in SAP Courses .
+-> Then 2-3 internship programs at IBM Skillsbuild simultaneously (And they are - IBM AI Strategist and Business Intelligence, IBM AI/ML, IBM Chatbot).
+-> Then my team got selected in Robofest 5.0 Grand Finale .
+-> Then We were also selected for SIH 2025 Grand Finale .
+-> We also participated in Odoo Online Hackathon .
+]
+, like doing registration and filling google forms for enrolling/participating in courses, internships and hackathons. Also in courses there are tight deadlines which we need to follow in order to ensure that we are not removed. And in internships they organize masterclass weekly following with tasks like completing the learning course and filling google forms for attendance and submitting previous completion certificate .
+
+Solution:
+As you saw the problems faced , I need this platform to manage my workload , keep track of each and every minute detail minor update across all the sections: Course, Internship and Hackathon registration form filling deadline . Also in Hackathons section, display the complete information, rules, etc. of individual hackathons. Same in the courses section and Internship section.  
+
+
+Theme :
+
+These are the color palettes tables :
+
+1. Element, Color Role, Hex Code, Visual Effect
+Background, Crisp White / Off-White,#F8FAFC,"Provides a calm, breathable canvas."
+Text, Slate Gray,#334155,"Softer than pure black, reducing eye strain during daytime reading."
+Primary Action, Focus Indigo,#4F46E5,"For active tabs, masterclass links, and submission buttons."
+Urgent/Deadline, Warning Orange,#F59E0B,Immediately draws the eye to impending registration closures.
+Success, Mint Green,#10B981,A satisfying visual reward for uploaded completion certificates.
+
+2. Element, Color Role, Hex Code, Visual Effect
+Background, Charcoal / Deep Gray,#121212,Deep contrast without the harshness of pure black.
+Surface/Cards, Lighter Charcoal,#1E1E1E,Used to separate individual internship tracks or courses.
+Primary Action,Tech Blue,#0A84FF,Pops cleanly against the dark background for active tasks.
+Urgent/Deadline, Alert Red,#FF453A,Unmissable high-contrast color for strict attendance deadlines.
+
+3. Element, Color Role, Hex Code, Visual Effect
+Background, Deep Navy,#0B0F19,"A rich, modern foundation."
+Primary Action, Electric Teal,#00E676,"Highlights current, ongoing sprints or active hackathons."
+Categorization, Amethyst Purple,#9C27B0,"Great for color-coding distinct categories (e.g., purple for Internships, teal for Hackathons)."
+Urgent/Deadline, Coral Pink,#FF4081,"A modern, aggressive highlight for urgent form submissions."
