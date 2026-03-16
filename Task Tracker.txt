@@ -24,9 +24,8 @@ The idea to solve this problem is I can create a Web-Application  for Tracking m
 Solution:
 As you saw the problems faced , I need this platform to manage my workload , keep track of each and every minute detail minor update across all the sections: Course, Internship and Hackathon registration form filling deadline . Also in Hackathons section, display the complete information, rules, etc. of individual hackathons. Same in the courses section and Internship section.  
 
-
+""" Not Given """
 Theme :
-
 These are the color palettes tables :
 
 1. Element, Color Role, Hex Code, Visual Effect
@@ -47,3 +46,19 @@ Background, Deep Navy,#0B0F19,"A rich, modern foundation."
 Primary Action, Electric Teal,#00E676,"Highlights current, ongoing sprints or active hackathons."
 Categorization, Amethyst Purple,#9C27B0,"Great for color-coding distinct categories (e.g., purple for Internships, teal for Hackathons)."
 Urgent/Deadline, Coral Pink,#FF4081,"A modern, aggressive highlight for urgent form submissions."
+
+
+Now just answer my questions :
+Can you give option to me for changing the theme of the web-app?
+
+
+4th iteration:
+Calendar event adding
+New project addition (Detailing) 
+Subtask detailing 
+
+5th : 
+More detailing 
+More control over the edits/tasks.
+Remove tasks / Projects
+
