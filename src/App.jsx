@@ -133,13 +133,21 @@ export default function App() {
 
   // Custom Sections State
   const [customSections, setCustomSections] = useState([
-    { id: 'personal-project', label: 'Personal Project', isCustom: true }
+    { id: 'personal-project', label: 'Personal Project', isCustom: true },
+    { id: 'workshop', label: 'Workshop', isCustom: true },
+    { id: 'others', label: 'Others', isCustom: true }
   ]);
   const [customTasks, setCustomTasks] = useState({
     'personal-project': [
       { id: 1, text: 'Phase 1: Planning and Wireframing', completed: true },
       { id: 2, text: 'Phase 2: Database Design', completed: false }
-    ]
+    ],
+    'workshop': [
+      { id: 1, text: 'Prepare workshop materials', completed: false },
+      { id: 2, text: 'Set up presentation slides', completed: false },
+      { id: 3, text: 'Arrange equipment and resources', completed: false }
+    ],
+    'others': []
   });
 
   // Track standard lists in state
@@ -157,6 +165,9 @@ export default function App() {
 
   // Calendar State
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Custom Section Task Input State
+  const [newTaskText, setNewTaskText] = useState('');
 
   React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -210,6 +221,77 @@ export default function App() {
       setCustomSections(customSections.map(s => s.id === modalConfig.data.id ? { ...s, label: title, date, description } : s));
     }
 
+    if (modalConfig.type === 'QUICK_ADD_TASK') {
+      const sectionId = modalConfig.data.id;
+      const taskText = formData.get('title');
+      const priority = formData.get('priority') || 'medium';
+      const dueDate = formData.get('dueDate') || '';
+      const notes = formData.get('notes') || '';
+      const tags = formData.get('tags') || '';
+      const status = formData.get('status') || 'pending';
+
+      const taskData = {
+        id: Date.now(),
+        text: taskText,
+        priority,
+        dueDate,
+        notes,
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+        status,
+        completed: status === 'completed'
+      };
+
+      // Handle custom sections
+      if (customSections.find(s => s.id === sectionId)) {
+        setCustomTasks(prev => ({
+          ...prev,
+          [sectionId]: [...(prev[sectionId] || []), taskData]
+        }));
+      }
+      // Handle core categories
+      else if (sectionId === 'courses') {
+        // Add task to the first course as a general task
+        setCourses(prev => prev.map((course, index) =>
+          index === 0 ? { ...course, tasks: [...course.tasks, `${taskText}${priority !== 'medium' ? ` (${priority})` : ''}${dueDate ? ` - Due: ${dueDate}` : ''}`] } : course
+        ));
+      }
+      else if (sectionId === 'internships') {
+        // Add task to the first internship as a general task
+        setInternships(prev => prev.map((internship, index) =>
+          index === 0 ? { ...internship, tasks: [...internship.tasks, { text: `${taskText}${priority !== 'medium' ? ` (${priority})` : ''}${dueDate ? ` - Due: ${dueDate}` : ''}`, icon: <CheckCircle2 size={16} /> }] } : internship
+        ));
+      }
+      else if (sectionId === 'hackathons') {
+        // Add task as a note/link to the first hackathon
+        setHackathons(prev => prev.map((hackathon, index) =>
+          index === 0 ? { ...hackathon, links: [...hackathon.links, `Task: ${taskText}${priority !== 'medium' ? ` (${priority})` : ''}${dueDate ? ` - Due: ${dueDate}` : ''}`] } : hackathon
+        ));
+      }
+    }
+
+    if (modalConfig.type === 'SELECT_CATEGORY_FOR_TASK') {
+      const selectedCategoryId = formData.get('category');
+      
+      // Check if it's a custom section
+      const selectedCategory = customSections.find(s => s.id === selectedCategoryId);
+      if (selectedCategory) {
+        setModalConfig({ type: 'QUICK_ADD_TASK', data: selectedCategory });
+        return; // Don't close the modal, just change its type
+      }
+      
+      // Handle core categories
+      const coreCategoryData = {
+        courses: { id: 'courses', label: 'SAP Courses', type: 'course' },
+        internships: { id: 'internships', label: 'Internships', type: 'internship' },
+        hackathons: { id: 'hackathons', label: 'Hackathons', type: 'hackathon' }
+      }[selectedCategoryId];
+      
+      if (coreCategoryData) {
+        setModalConfig({ type: 'QUICK_ADD_TASK', data: coreCategoryData });
+        return; // Don't close the modal, just change its type
+      }
+    }
+
     setModalConfig(null);
   };
 
@@ -228,6 +310,29 @@ export default function App() {
       return newTasks;
     });
     setActiveTab('dashboard');
+  };
+
+  const handleDeleteCourse = (id) => {
+    setCourses(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleDeleteInternship = (id) => {
+    setInternships(prev => prev.filter(i => i.id !== id));
+  };
+
+  const handleDeleteHackathon = (id) => {
+    setHackathons(prev => prev.filter(h => h.id !== id));
+  };
+
+  const handleAddTask = (sectionId, e) => {
+    e.preventDefault();
+    if (newTaskText.trim()) {
+      setCustomTasks(prev => ({
+        ...prev,
+        [sectionId]: [...(prev[sectionId] || []), { id: Date.now(), text: newTaskText, completed: false }]
+      }));
+      setNewTaskText('');
+    }
   };
 
   const renderDashboard = () => (
@@ -308,6 +413,7 @@ export default function App() {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <h3 className="card-title">{course.title}</h3>
                 <Edit2 size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_COURSE', course, { hasDate: true, hasDesc: true, hasOrg: true })} />
+                <Trash2 size={14} style={{ color: 'var(--status-deadline)', cursor: 'pointer' }} onClick={() => handleDeleteCourse(course.id)} />
               </div>
               <div className="card-org"><BookOpen size={14}/> {course.organization}</div>
             </div>
@@ -360,6 +466,7 @@ export default function App() {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <h3 className="card-title">{intern.title}</h3>
                 <Edit2 size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_INTERNSHIP', intern, { hasDate: true, hasDesc: true, hasOrg: true })} />
+                <Trash2 size={14} style={{ color: 'var(--status-deadline)', cursor: 'pointer' }} onClick={() => handleDeleteInternship(intern.id)} />
               </div>
               <div className="card-org"><Briefcase size={14}/> {intern.organization}</div>
             </div>
@@ -409,6 +516,7 @@ export default function App() {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <h3 className="card-title">{hackathon.title}</h3>
                 <Edit2 size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_HACKATHON', hackathon, { hasDate: true, hasDesc: true, hasOrg: true })} />
+                <Trash2 size={14} style={{ color: 'var(--status-deadline)', cursor: 'pointer' }} onClick={() => handleDeleteHackathon(hackathon.id)} />
               </div>
               <div className="card-org"><Trophy size={14}/> {hackathon.organization}</div>
             </div>
@@ -546,12 +654,70 @@ export default function App() {
 
         <ul className="task-list" style={{ marginBottom: '2rem' }}>
           {tasks.map(task => (
-            <li key={task.id} className="task-item" style={{ fontSize: '1.05rem', alignItems: 'center', padding: '0.75rem', background: 'var(--hover-bg)', borderRadius: '8px', cursor: 'pointer' }} onClick={() => toggleTask(section.id, task.id)}>
-              {task.completed ? 
-                 <CheckCircle2 size={20} style={{ color: 'var(--status-active)' }} /> : 
-                 <div style={{ width: '20px', height: '20px', border: '2px solid var(--text-muted)', borderRadius: '50%' }}></div>
-              }
-              <span style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.6 : 1, flexGrow: 1 }}>{task.text}</span>
+            <li key={task.id} className="task-item" style={{ fontSize: '1.05rem', padding: '1rem', background: 'var(--hover-bg)', borderRadius: '8px', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{ cursor: 'pointer', marginTop: '2px' }} onClick={() => toggleTask(section.id, task.id)}>
+                  {task.completed ? 
+                     <CheckCircle2 size={20} style={{ color: 'var(--status-active)' }} /> : 
+                     <div style={{ width: '20px', height: '20px', border: '2px solid var(--text-muted)', borderRadius: '50%' }}></div>
+                  }
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <span style={{ 
+                      textDecoration: task.completed ? 'line-through' : 'none', 
+                      opacity: task.completed ? 0.6 : 1,
+                      fontWeight: '500'
+                    }}>
+                      {task.text}
+                    </span>
+                    {task.priority && task.priority !== 'medium' && (
+                      <span style={{ 
+                        fontSize: '0.7rem', 
+                        padding: '0.2rem 0.4rem', 
+                        borderRadius: '4px',
+                        background: task.priority === 'high' ? 'var(--status-deadline)' : task.priority === 'low' ? 'var(--status-pending)' : 'var(--status-active)',
+                        color: 'white',
+                        textTransform: 'uppercase'
+                      }}>
+                        {task.priority}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    {task.dueDate && (
+                      <span>📅 {task.dueDate}</span>
+                    )}
+                    {task.tags && task.tags.length > 0 && (
+                      <span>🏷️ {task.tags.join(', ')}</span>
+                    )}
+                    {task.status && task.status !== 'pending' && (
+                      <span style={{ 
+                        color: task.status === 'completed' ? 'var(--status-active)' : 
+                               task.status === 'in-progress' ? 'var(--status-pending)' : 
+                               'var(--text-muted)'
+                      }}>
+                        ● {task.status.replace('-', ' ')}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {task.notes && (
+                    <div style={{ 
+                      fontSize: '0.85rem', 
+                      color: 'var(--text-muted)', 
+                      marginTop: '0.5rem',
+                      padding: '0.5rem',
+                      background: 'var(--panel-bg)',
+                      borderRadius: '4px',
+                      borderLeft: '3px solid var(--accent-gradient)'
+                    }}>
+                      {task.notes}
+                    </div>
+                  )}
+                </div>
+              </div>
             </li>
           ))}
           {tasks.length === 0 && <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No tasks added yet. Start planning!</div>}
@@ -649,7 +815,9 @@ export default function App() {
               <option value="cyber-neon">✨ Cyber Neon Hub</option>
             </select>
             
-            <button className="btn btn-primary">
+            <button className="btn btn-primary" onClick={() => {
+              setModalConfig({ type: 'SELECT_CATEGORY_FOR_TASK' });
+            }}>
               + Quick Add Task
             </button>
           </div>
@@ -661,6 +829,11 @@ export default function App() {
         {activeTab === 'hackathons' && renderHackathons()}
         {activeTab === 'calendar' && renderCalendar()}
         {customSections.find(s => s.id === activeTab) && renderCustomSection(customSections.find(s => s.id === activeTab))}
+
+        {/* Calendar at the bottom of all pages */}
+        <div style={{ marginTop: '3rem' }}>
+          {renderCalendar()}
+        </div>
       </main>
 
       {/* Global Form Modal Overlay */}
@@ -669,36 +842,100 @@ export default function App() {
           <div className="glass animate-fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h2 className="card-title text-gradient" style={{ fontSize: '1.5rem' }}>
-                {modalConfig.type.startsWith('ADD') ? 'Add New' : 'Edit'} Details
+                {modalConfig.type === 'SELECT_CATEGORY_FOR_TASK' ? 'Select Category for Task' : modalConfig.type === 'QUICK_ADD_TASK' ? 'Quick Add Task' : modalConfig.type.startsWith('ADD') ? 'Add New' : 'Edit'} Details
               </h2>
               <button onClick={() => setModalConfig(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
             </div>
             
             <form onSubmit={handleModalSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Title *</label>
-                <input required name="title" defaultValue={modalConfig.data?.title || ''} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }} />
-              </div>
-              
-              {modalConfig.hasOrg && (
+              {modalConfig.type === 'SELECT_CATEGORY_FOR_TASK' ? (
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Organization / Target</label>
-                  <input name="organization" defaultValue={modalConfig.data?.organization || ''} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }} />
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Select Category *</label>
+                  <select required name="category" style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    background: 'var(--panel-bg)', 
+                    color: 'var(--text-main)', 
+                    border: '1px solid var(--panel-border)', 
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}>
+                    <option value="" style={{ background: 'var(--panel-bg)', color: 'var(--text-muted)' }}>Choose a category...</option>
+                    {/* Core categories */}
+                    <option value="courses" style={{ background: 'var(--panel-bg)', color: 'var(--text-main)' }}>SAP Courses</option>
+                    <option value="internships" style={{ background: 'var(--panel-bg)', color: 'var(--text-main)' }}>Internships</option>
+                    <option value="hackathons" style={{ background: 'var(--panel-bg)', color: 'var(--text-main)' }}>Hackathons</option>
+                    {/* Custom sections */}
+                    {customSections.map(section => (
+                      <option key={section.id} value={section.id} style={{ background: 'var(--panel-bg)', color: 'var(--text-main)' }}>{section.label}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
-              
-              {modalConfig.hasDate && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Date / Deadline (Optional)</label>
-                  <input type="date" name="date" defaultValue={modalConfig.data?.date || modalConfig.data?.deadline || ''} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none', colorScheme: 'dark' }} />
-                </div>
-              )}
+              ) : (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      Task Description *
+                    </label>
+                    <input required name="title" defaultValue={modalConfig.data?.title || ''} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }} />
+                  </div>
 
-              {modalConfig.hasDesc && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Short Description (Optional)</label>
-                  <textarea name="description" defaultValue={modalConfig.data?.description || ''} rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none', resize: 'vertical' }} />
-                </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Priority</label>
+                    <select name="priority" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }}>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Due Date</label>
+                    <input type="date" name="dueDate" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none', colorScheme: 'dark' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Detailed Notes/Description</label>
+                    <textarea name="notes" rows={3} placeholder="Add detailed notes or description..." style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none', resize: 'vertical' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Tags (comma-separated)</label>
+                    <input name="tags" placeholder="e.g., urgent, work, personal" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Status</label>
+                    <select name="status" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }}>
+                      <option value="pending">Pending</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="on-hold">On Hold</option>
+                    </select>
+                  </div>
+                  
+                  {modalConfig.type !== 'QUICK_ADD_TASK' && modalConfig.hasOrg && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Organization / Target</label>
+                      <input name="organization" defaultValue={modalConfig.data?.organization || ''} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none' }} />
+                    </div>
+                  )}
+                  
+                  {modalConfig.type !== 'QUICK_ADD_TASK' && modalConfig.hasDate && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Date / Deadline (Optional)</label>
+                      <input type="date" name="date" defaultValue={modalConfig.data?.date || modalConfig.data?.deadline || ''} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none', colorScheme: 'dark' }} />
+                    </div>
+                  )}
+
+                  {modalConfig.type !== 'QUICK_ADD_TASK' && modalConfig.hasDesc && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Short Description (Optional)</label>
+                      <textarea name="description" defaultValue={modalConfig.data?.description || ''} rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--hover-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', outline: 'none', resize: 'vertical' }} />
+                    </div>
+                  )}
+                </>
               )}
 
               <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
