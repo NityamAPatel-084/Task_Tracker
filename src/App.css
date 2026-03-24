@@ -237,6 +237,10 @@
   font-weight: 600;
   color: var(--text-main);
 }
+.hover-underline:hover {
+  text-decoration: underline;
+  color: #0ea5e9;
+}
 
 .card-org {
   color: var(--accent-hover);

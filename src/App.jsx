@@ -59,11 +59,12 @@ const initialInternships = [
     status: "active",
     progress: 60,
     deadline: "Weekly",
+    notes: '',
     tasks: [
-      { text: "Attend Weekly Masterclass (Friday 5 PM)", icon: <Video size={16}/> },
-      { text: "Submit Google Form for Attendance", icon: <FileText size={16}/> },
-      { text: "Complete Learning Course Modules", icon: <BookOpen size={16}/> },
-      { text: "Upload Prior Completion Certificate", icon: <AlertCircle size={16}/> }
+      { text: "Attend Weekly Masterclass (Friday 5 PM)", completed: false },
+      { text: "Submit Google Form for Attendance", completed: false },
+      { text: "Complete Learning Course Modules", completed: false },
+      { text: "Upload Prior Completion Certificate", completed: false }
     ]
   },
   {
@@ -73,10 +74,11 @@ const initialInternships = [
     status: "active",
     progress: 45,
     deadline: "Weekly",
+    notes: '',
     tasks: [
-      { text: "Attend Weekly Masterclass", icon: <Video size={16}/> },
-      { text: "Complete Model Building Assignment", icon: <Activity size={16}/> },
-      { text: "Submit Attendance Form", icon: <FileText size={16}/> }
+      { text: "Attend Weekly Masterclass", completed: false },
+      { text: "Complete Model Building Assignment", completed: false },
+      { text: "Submit Attendance Form", completed: false }
     ]
   },
   {
@@ -86,9 +88,10 @@ const initialInternships = [
     status: "pending",
     progress: 10,
     deadline: "Weekly",
+    notes: '',
     tasks: [
-      { text: "Introductory Masterclass", icon: <Video size={16}/> },
-      { text: "Explore Watson Assistant docs", icon: <BookOpen size={16}/> }
+      { text: "Introductory Masterclass", completed: false },
+      { text: "Explore Watson Assistant docs", completed: false }
     ]
   }
 ];
@@ -102,7 +105,13 @@ const initialHackathons = [
     date: "2026-05-10",
     teamSize: 4,
     description: "Grand Finale round. Need to prepare physical robot prototype and integration code.",
-    links: ["Registration Form", "Rulebook PDF", "Submission Portal"]
+    links: [
+      { label: "Registration Form", url: "" },
+      { label: "Rulebook PDF", url: "" },
+      { label: "Submission Portal", url: "" }
+    ],
+    tasks: [],
+    notes: ''
   },
   {
     id: 2,
@@ -112,7 +121,12 @@ const initialHackathons = [
     date: "2026-06-01",
     teamSize: 6,
     description: "Grand Finale stage. Working on Problem Statement #1042 - Hardware prototype pending.",
-    links: ["Nodal Center Form", "Rules & Guidelines"]
+    links: [
+      { label: "Nodal Center Form", url: "" },
+      { label: "Rules & Guidelines", url: "" }
+    ],
+    tasks: [],
+    notes: ''
   },
   {
     id: 3,
@@ -122,7 +136,12 @@ const initialHackathons = [
     date: "2026-04-30",
     teamSize: 2,
     description: "Building ERP modules using Python/XML. Participating in the online phase.",
-    links: ["Odoo Dev Docs", "Submission Link"]
+    links: [
+      { label: "Odoo Dev Docs", url: "" },
+      { label: "Submission Link", url: "" }
+    ],
+    tasks: [],
+    notes: ''
   }
 ];
 
@@ -130,6 +149,7 @@ const initialHackathons = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState('deep-focus');
+  const [tabLinks, setTabLinks] = useState({});
 
   // Custom Sections State
   const [customSections, setCustomSections] = useState([
@@ -147,6 +167,18 @@ export default function App() {
       { id: 2, text: 'Set up presentation slides', completed: false },
       { id: 3, text: 'Arrange equipment and resources', completed: false }
     ],
+    'others': []
+  });
+
+  // Custom projects per section (card grid)
+  const [customProjects, setCustomProjects] = useState({
+    'personal-project': [
+      { id: 1, title: 'My First Project', description: 'A personal dev project', date: '', status: 'active', tasks: [
+          { text: 'Phase 1: Planning and Wireframing', completed: true },
+          { text: 'Phase 2: Database Design', completed: false }
+      ], notes: '' }
+    ],
+    'workshop': [],
     'others': []
   });
 
@@ -207,18 +239,39 @@ export default function App() {
     if (modalConfig.type === 'ADD_CALENDAR') setCalendarEvents([...calendarEvents, { id: Date.now(), title, date, type: 'general' }]);
     
     if (modalConfig.type === 'ADD_PROJECT') {
-      const newId = title.toLowerCase().replace(/\s+/g, '-');
-      setCustomSections([...customSections, { id: newId, label: title, isCustom: true, date, description }]);
-      setCustomTasks({ ...customTasks, [newId]: [] });
-      setActiveTab(newId);
+      // Add a new project card inside the CURRENT active section (or create a new section)
+      const isNewSection = !customSections.find(s => s.id === activeTab);
+      if (isNewSection) {
+        // If we pressed "Add New Project" from sidebar — create a new section
+        const newId = title.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+        setCustomSections([...customSections, { id: newId, label: title, isCustom: true }]);
+        setCustomProjects(prev => ({ ...prev, [newId]: [] }));
+        setCustomTasks(prev => ({ ...prev, [newId]: [] }));
+        setActiveTab(newId);
+      } else {
+        // Add a new project card inside the active section
+        const projectCard = {
+          id: Date.now(),
+          title,
+          description: description || '',
+          date: date || '',
+          status: 'active',
+          tasks: [],
+          notes: ''
+        };
+        setCustomProjects(prev => ({
+          ...prev,
+          [activeTab]: [...(prev[activeTab] || []), projectCard]
+        }));
+      }
     }
     
-    // Simplistic edit override logic
-    if (modalConfig.type === 'EDIT_COURSE') setCourses(courses.map(c => c.id === newEntry.id ? { ...c, ...newEntry } : c));
-    if (modalConfig.type === 'EDIT_INTERNSHIP') setInternships(internships.map(i => i.id === newEntry.id ? { ...i, ...newEntry } : i));
-    if (modalConfig.type === 'EDIT_HACKATHON') setHackathons(hackathons.map(h => h.id === newEntry.id ? { ...h, ...newEntry } : h));
-    if (modalConfig.type === 'EDIT_PROJECT') {
-      setCustomSections(customSections.map(s => s.id === modalConfig.data.id ? { ...s, label: title, date, description } : s));
+    if (modalConfig.type === 'EDIT_PROJECT_CARD') {
+      const { sectionId, projectId } = modalConfig;
+      setCustomProjects(prev => ({
+        ...prev,
+        [sectionId]: (prev[sectionId] || []).map(p => p.id === projectId ? { ...p, title, description: description || p.description, date: date || p.date } : p)
+      }));
     }
 
     if (modalConfig.type === 'QUICK_ADD_TASK') {
@@ -304,24 +357,45 @@ export default function App() {
 
   const handleDeleteSection = (id) => {
     setCustomSections(prev => prev.filter(s => s.id !== id));
-    setCustomTasks(prev => {
-      const newTasks = { ...prev };
-      delete newTasks[id];
-      return newTasks;
-    });
+    setCustomTasks(prev => { const n = { ...prev }; delete n[id]; return n; });
+    setCustomProjects(prev => { const n = { ...prev }; delete n[id]; return n; });
     setActiveTab('dashboard');
+  };
+
+  const handleProjectUpdate = (sectionId, projectId, updates) => {
+    setCustomProjects(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] || []).map(p => p.id === projectId ? { ...p, ...updates } : p)
+    }));
+  };
+
+  const handleDeleteProject = (sectionId, projectId) => {
+    setCustomProjects(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] || []).filter(p => p.id !== projectId)
+    }));
   };
 
   const handleDeleteCourse = (id) => {
     setCourses(prev => prev.filter(c => c.id !== id));
   };
 
+  const handleCourseUpdate = (id, updates) => {
+    setCourses(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
   const handleDeleteInternship = (id) => {
     setInternships(prev => prev.filter(i => i.id !== id));
+  };
+  const handleInternshipUpdate = (id, updates) => {
+    setInternships(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
   };
 
   const handleDeleteHackathon = (id) => {
     setHackathons(prev => prev.filter(h => h.id !== id));
+  };
+  const handleHackathonUpdate = (id, updates) => {
+    setHackathons(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
   };
 
   const handleAddTask = (sectionId, e) => {
@@ -406,48 +480,150 @@ export default function App() {
         <button className="btn btn-primary" onClick={() => openModal('ADD_COURSE', null, { hasDate: true, hasDesc: true, hasOrg: true })}><PlusCircle size={16} /> Add Course</button>
       </div>
       <div className="section-grid">
-      {courses.map((course, idx) => (
+      {courses.map((course, idx) => {
+        const completedTasks = course.tasks.filter(t => (typeof t === 'object' ? t.completed : false)).length;
+        const progress = course.tasks.length === 0 ? (course.progress || 0) : Math.round((completedTasks / course.tasks.length) * 100);
+        return (
         <div className={`glass data-card animate-fade-in stagger-${(idx % 4) + 1}`} key={course.id}>
           <div className="card-header">
-            <div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <h3 className="card-title">{course.title}</h3>
-                <Edit2 size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_COURSE', course, { hasDate: true, hasDesc: true, hasOrg: true })} />
-                <Trash2 size={14} style={{ color: 'var(--status-deadline)', cursor: 'pointer' }} onClick={() => handleDeleteCourse(course.id)} />
+            <div style={{ paddingRight: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div>
+                {course.courseLink ? (
+                  <a href={course.courseLink} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <h3 className="card-title hover-underline" style={{ cursor: 'pointer', lineHeight: '1.2' }}>{course.title}</h3>
+                  </a>
+                ) : (
+                  <h3 className="card-title" style={{ lineHeight: '1.2' }}>{course.title}</h3>
+                )}
               </div>
-              <div className="card-org"><BookOpen size={14}/> {course.organization}</div>
+              
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <button 
+                  onClick={() => {
+                    const newLink = window.prompt("Enter the link URL for this course:", course.courseLink || "");
+                    if (newLink !== null) {
+                       handleCourseUpdate(course.id, { courseLink: newLink });
+                    }
+                  }}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title={course.courseLink ? "Update Link" : "Add Link"}
+                >
+                  <ExternalLink size={16} style={{ color: course.courseLink ? '#10b981' : 'var(--text-muted)' }} />
+                </button>
+                <button 
+                  onClick={() => openModal('EDIT_COURSE', course, { hasDate: true, hasDesc: true, hasOrg: true })}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title="Edit Course"
+                >
+                  <Edit2 size={16} style={{ color: 'var(--text-muted)' }} />
+                </button>
+                <button 
+                  onClick={() => handleDeleteCourse(course.id)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title="Delete Course"
+                >
+                  <Trash2 size={16} style={{ color: 'var(--status-deadline)' }} />
+                </button>
+              </div>
+
+              <div className="card-org" style={{ marginTop: '0.2rem' }}><BookOpen size={14}/> {course.organization}</div>
             </div>
-            <span className={`badge ${course.status}`}>{course.status}</span>
+            <select 
+              className={`badge ${course.status}`}
+              value={course.status}
+              onChange={(e) => handleCourseUpdate(course.id, { status: e.target.value })}
+              style={{ 
+                padding: '0.2rem 0.5rem', outline: 'none', border: '1px solid var(--panel-border)', 
+                background: 'var(--sidebar-bg)', cursor: 'pointer', appearance: 'none', minWidth: '90px', textAlign: 'center', fontWeight: 'bold',
+                color: course.status === 'completed' ? '#10b981' : 
+                       course.status === 'pending' ? 'white' : 
+                       '#10b981' // Green for active too per reference screenshot
+              }}
+            >
+              <option value="active" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>ACTIVE</option>
+              <option value="pending" style={{ background: '#666', color: 'white' }}>PENDING</option>
+              <option value="completed" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>COMPLETED</option>
+            </select>
           </div>
           <div className="card-body">
             <p style={{color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem'}}>{course.description}</p>
             
             <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Pending Tasks:</h4>
             <ul className="task-list" style={{ marginTop: 0 }}>
-              {course.tasks.map((task, i) => (
-                <li className="task-item" key={i}>
-                  <ChevronRight size={16} className="task-icon" />
-                  <span>{task}</span>
+              {course.tasks.map((task, i) => {
+                const isCompleted = typeof task === 'object' ? task.completed : false;
+                const taskText = typeof task === 'object' ? task.text : task;
+                return (
+                <li className="task-item" key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div 
+                    style={{ cursor: 'pointer', marginTop: '2px', color: isCompleted ? '#10b981' : 'var(--text-muted)' }} 
+                    onClick={() => {
+                        const newTasks = [...course.tasks];
+                        newTasks[i] = typeof task === 'object' ? { ...task, completed: !task.completed } : { text: taskText, completed: !isCompleted };
+                        handleCourseUpdate(course.id, { tasks: newTasks });
+                    }}
+                  >
+                    {isCompleted ? <CheckCircle2 size={16} /> : <div style={{ width: '16px', height: '16px', border: '1.5px solid currentColor', borderRadius: '4px' }}></div>}
+                  </div>
+                  <span style={{ fontSize: '0.9rem', textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }}>
+                    {taskText}
+                  </span>
+                  <button 
+                    onClick={() => handleCourseUpdate(course.id, { tasks: course.tasks.filter((_, idx) => idx !== i) })}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--status-deadline)', cursor: 'pointer', marginLeft: 'auto', padding: '0 0.2rem' }}
+                    title="Remove Task"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </li>
-              ))}
+              )})}
             </ul>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.target.elements.taskInput;
+                if(input.value.trim()) {
+                   handleCourseUpdate(course.id, { tasks: [...course.tasks, { text: input.value.trim(), completed: false }] });
+                   input.value = '';
+                }
+            }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input name="taskInput" placeholder="Add a new task..." style={{ flexGrow: 1, padding: '0.4rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }} />
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.6rem' }}><Plus size={14}/></button>
+            </form>
+            
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Notes & Remarks:</h4>
+              <textarea 
+                defaultValue={course.notes || ''}
+                onBlur={(e) => handleCourseUpdate(course.id, { notes: e.target.value })}
+                placeholder="Add important points/remarks here..."
+                rows={2}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', resize: 'vertical', outline: 'none' }}
+              />
+            </div>
 
-            <div className="progress-wrapper">
+            <div className="progress-wrapper" style={{ marginTop: '1.5rem' }}>
               <div className="progress-meta">
-                <span>Progress</span>
-                <span>{course.progress}%</span>
+                <span>Course Progress</span>
+                <span>{progress}%</span>
               </div>
               <div className="progress-bar-bg">
-                 <div className="progress-bar-fill" style={{ width: `${course.progress}%` }}></div>
+                 <div className="progress-bar-fill" style={{ width: `${progress}%`, transition: 'width 0.3s ease' }}></div>
               </div>
             </div>
           </div>
           <div className="card-footer">
             <span>Deadline: <strong>{course.deadline}</strong></span>
-            <button className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Enter Course</button>
+            {course.courseLink ? (
+              <a href={course.courseLink} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.4rem 1rem', textDecoration: 'none' }}>Enter Course</a>
+            ) : (
+              <button className="btn btn-outline" style={{ padding: '0.4rem 1rem' }} onClick={() => {
+                 const newLink = window.prompt("Enter the link URL for this course:", "");
+                 if (newLink !== null) handleCourseUpdate(course.id, { courseLink: newLink });
+              }}>Add Link First</button>
+            )}
           </div>
         </div>
-      ))}
+      )})}
       </div>
     </div>
   );
@@ -459,45 +635,139 @@ export default function App() {
         <button className="btn btn-primary" onClick={() => openModal('ADD_INTERNSHIP', null, { hasDate: true, hasDesc: true, hasOrg: true })}><PlusCircle size={16} /> Add Program</button>
       </div>
       <div className="section-grid">
-      {internships.map((intern, idx) => (
+      {internships.map((intern, idx) => {
+        const completedTasks = intern.tasks.filter(t => typeof t === 'object' && t.completed).length;
+        const internProgress = intern.tasks.length === 0 ? (intern.progress || 0) : Math.round((completedTasks / intern.tasks.length) * 100);
+        return (
         <div className={`glass data-card animate-fade-in stagger-${(idx % 4) + 1}`} key={intern.id}>
           <div className="card-header">
-            <div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <h3 className="card-title">{intern.title}</h3>
-                <Edit2 size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_INTERNSHIP', intern, { hasDate: true, hasDesc: true, hasOrg: true })} />
-                <Trash2 size={14} style={{ color: 'var(--status-deadline)', cursor: 'pointer' }} onClick={() => handleDeleteInternship(intern.id)} />
+            <div style={{ paddingRight: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div>
+                {intern.internLink ? (
+                  <a href={intern.internLink} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <h3 className="card-title hover-underline" style={{ cursor: 'pointer', lineHeight: '1.2' }}>{intern.title}</h3>
+                  </a>
+                ) : (
+                  <h3 className="card-title" style={{ lineHeight: '1.2' }}>{intern.title}</h3>
+                )}
               </div>
-              <div className="card-org"><Briefcase size={14}/> {intern.organization}</div>
+              
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <button 
+                  onClick={() => {
+                    const newLink = window.prompt("Enter the link URL for this internship:", intern.internLink || "");
+                    if (newLink !== null) { handleInternshipUpdate(intern.id, { internLink: newLink }); }
+                  }}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title={intern.internLink ? "Update Link" : "Add Link"}
+                >
+                  <ExternalLink size={16} style={{ color: intern.internLink ? '#10b981' : 'var(--text-muted)' }} />
+                </button>
+                <button 
+                  onClick={() => openModal('EDIT_INTERNSHIP', intern, { hasDate: true, hasDesc: true, hasOrg: true })}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title="Edit Internship"
+                >
+                  <Edit2 size={16} style={{ color: 'var(--text-muted)' }} />
+                </button>
+                <button 
+                  onClick={() => handleDeleteInternship(intern.id)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title="Delete Internship"
+                >
+                  <Trash2 size={16} style={{ color: 'var(--status-deadline)' }} />
+                </button>
+              </div>
+
+              <div className="card-org" style={{ marginTop: '0.2rem' }}><Briefcase size={14}/> {intern.organization}</div>
             </div>
-            <span className={`badge ${intern.status}`}>{intern.status}</span>
+            <select 
+              className={`badge ${intern.status}`}
+              value={intern.status}
+              onChange={(e) => handleInternshipUpdate(intern.id, { status: e.target.value })}
+              style={{ 
+                padding: '0.2rem 0.5rem', outline: 'none', border: '1px solid var(--panel-border)', 
+                background: 'var(--sidebar-bg)', cursor: 'pointer', appearance: 'none', minWidth: '90px', textAlign: 'center', fontWeight: 'bold',
+                color: intern.status === 'completed' ? '#10b981' : intern.status === 'pending' ? 'white' : '#10b981'
+              }}
+            >
+              <option value="active" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>ACTIVE</option>
+              <option value="pending" style={{ background: '#666', color: 'white' }}>PENDING</option>
+              <option value="completed" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>COMPLETED</option>
+            </select>
           </div>
           <div className="card-body">
-            <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Weekly Checklist:</h4>
+            <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Sub-Tasks:</h4>
             <ul className="task-list" style={{ marginTop: 0 }}>
-              {intern.tasks.map((task, i) => (
-                <li className="task-item" key={i}>
-                  <div className="task-icon">{task.icon}</div>
-                  <span>{task.text}</span>
+              {intern.tasks.map((task, i) => {
+                const isCompleted = typeof task === 'object' ? task.completed : false;
+                const taskText = typeof task === 'object' ? task.text : task;
+                return (
+                <li className="task-item" key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div 
+                    style={{ cursor: 'pointer', marginTop: '2px', color: isCompleted ? '#10b981' : 'var(--text-muted)', flexShrink: 0 }} 
+                    onClick={() => {
+                      const newTasks = [...intern.tasks];
+                      newTasks[i] = { text: taskText, completed: !isCompleted };
+                      handleInternshipUpdate(intern.id, { tasks: newTasks });
+                    }}
+                  >
+                    {isCompleted ? <CheckCircle2 size={16} /> : <div style={{ width: '16px', height: '16px', border: '1.5px solid currentColor', borderRadius: '4px' }}></div>}
+                  </div>
+                  <span style={{ fontSize: '0.9rem', textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }}>{taskText}</span>
+                  <button 
+                    onClick={() => handleInternshipUpdate(intern.id, { tasks: intern.tasks.filter((_, idx) => idx !== i) })}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--status-deadline)', cursor: 'pointer', marginLeft: 'auto', padding: '0 0.2rem' }}
+                    title="Remove Task"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </li>
-              ))}
+              )})}
             </ul>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.target.elements.internTaskInput;
+                if(input.value.trim()) {
+                   handleInternshipUpdate(intern.id, { tasks: [...intern.tasks, { text: input.value.trim(), completed: false }] });
+                   input.value = '';
+                }
+            }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input name="internTaskInput" placeholder="Add a new task..." style={{ flexGrow: 1, padding: '0.4rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }} />
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.6rem' }}><Plus size={14}/></button>
+            </form>
+
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Notes & Remarks:</h4>
+              <textarea 
+                defaultValue={intern.notes || ''}
+                onBlur={(e) => handleInternshipUpdate(intern.id, { notes: e.target.value })}
+                placeholder="Add important points/remarks here..."
+                rows={2}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', resize: 'vertical', outline: 'none' }}
+              />
+            </div>
+
             <div className="progress-wrapper" style={{ marginTop: '1.5rem' }}>
               <div className="progress-meta">
                 <span>Program Completion</span>
-                <span>{intern.progress}%</span>
+                <span>{internProgress}%</span>
               </div>
               <div className="progress-bar-bg">
-                 <div className="progress-bar-fill" style={{ width: `${intern.progress}%`, background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}></div>
+                 <div className="progress-bar-fill" style={{ width: `${internProgress}%`, background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)', transition: 'width 0.3s ease' }}></div>
               </div>
             </div>
           </div>
           <div className="card-footer">
-            <span>Status: <strong>{intern.deadline} Requirements</strong></span>
-            <button className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Submit Forms</button>
+            <span>Deadline: <strong>{intern.deadline}</strong></span>
+            {intern.internLink ? (
+              <a href={intern.internLink} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.4rem 1rem', textDecoration: 'none' }}>Open Program</a>
+            ) : (
+              <button className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Submit Forms</button>
+            )}
           </div>
         </div>
-      ))}
+      )})}
       </div>
     </div>
   );
@@ -509,18 +779,66 @@ export default function App() {
         <button className="btn btn-primary" onClick={() => openModal('ADD_HACKATHON', null, { hasDate: true, hasDesc: true, hasOrg: true })}><PlusCircle size={16} /> Add Hackathon</button>
       </div>
       <div className="section-grid">
-      {hackathons.map((hackathon, idx) => (
+      {hackathons.map((hackathon, idx) => {
+        const completedHTasks = hackathon.tasks.filter(t => typeof t === 'object' && t.completed).length;
+        const hackProgress = hackathon.tasks.length === 0 ? 0 : Math.round((completedHTasks / hackathon.tasks.length) * 100);
+        return (
         <div className={`glass data-card animate-fade-in stagger-${(idx % 4) + 1}`} key={hackathon.id}>
           <div className="card-header">
-            <div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <h3 className="card-title">{hackathon.title}</h3>
-                <Edit2 size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_HACKATHON', hackathon, { hasDate: true, hasDesc: true, hasOrg: true })} />
-                <Trash2 size={14} style={{ color: 'var(--status-deadline)', cursor: 'pointer' }} onClick={() => handleDeleteHackathon(hackathon.id)} />
+            <div style={{ paddingRight: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div>
+                {hackathon.hackathonLink ? (
+                  <a href={hackathon.hackathonLink} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <h3 className="card-title hover-underline" style={{ cursor: 'pointer', lineHeight: '1.2' }}>{hackathon.title}</h3>
+                  </a>
+                ) : (
+                  <h3 className="card-title" style={{ lineHeight: '1.2' }}>{hackathon.title}</h3>
+                )}
               </div>
-              <div className="card-org"><Trophy size={14}/> {hackathon.organization}</div>
+              
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <button 
+                  onClick={() => {
+                    const newLink = window.prompt("Enter the link URL for this hackathon:", hackathon.hackathonLink || "");
+                    if (newLink !== null) { handleHackathonUpdate(hackathon.id, { hackathonLink: newLink }); }
+                  }}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title={hackathon.hackathonLink ? "Update Link" : "Add Link"}
+                >
+                  <ExternalLink size={16} style={{ color: hackathon.hackathonLink ? '#10b981' : 'var(--text-muted)' }} />
+                </button>
+                <button 
+                  onClick={() => openModal('EDIT_HACKATHON', hackathon, { hasDate: true, hasDesc: true, hasOrg: true })}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title="Edit Hackathon"
+                >
+                  <Edit2 size={16} style={{ color: 'var(--text-muted)' }} />
+                </button>
+                <button 
+                  onClick={() => handleDeleteHackathon(hackathon.id)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  title="Delete Hackathon"
+                >
+                  <Trash2 size={16} style={{ color: 'var(--status-deadline)' }} />
+                </button>
+              </div>
+
+              <div className="card-org" style={{ marginTop: '0.2rem' }}><Trophy size={14}/> {hackathon.organization}</div>
             </div>
-            <span className={`badge ${hackathon.status}`}>{hackathon.status}</span>
+            <select 
+              className={`badge ${hackathon.status}`}
+              value={hackathon.status}
+              onChange={(e) => handleHackathonUpdate(hackathon.id, { status: e.target.value })}
+              style={{ 
+                padding: '0.2rem 0.5rem', outline: 'none', border: '1px solid var(--panel-border)', 
+                background: 'var(--sidebar-bg)', cursor: 'pointer', appearance: 'none', minWidth: '90px', textAlign: 'center', fontWeight: 'bold',
+                color: hackathon.status === 'completed' ? '#10b981' : hackathon.status === 'pending' ? '#eab308' : '#10b981'
+              }}
+            >
+              <option value="active" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>ACTIVE</option>
+              <option value="pending" style={{ background: 'var(--bg-dark)', color: '#eab308' }}>PENDING</option>
+              <option value="completed" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>COMPLETED</option>
+            </select>
           </div>
           <div className="card-body">
             <p style={{color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem'}}>{hackathon.description}</p>
@@ -528,33 +846,129 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ background: 'var(--hover-bg)', padding: '0.75rem', borderRadius: '8px' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Event Date</div>
-                <div style={{ fontWeight: '600', marginTop: '0.2rem' }}>{hackathon.date}</div>
+                <input 
+                  type="date" 
+                  defaultValue={hackathon.date}
+                  onBlur={(e) => handleHackathonUpdate(hackathon.id, { date: e.target.value })}
+                  style={{ fontWeight: '600', marginTop: '0.2rem', background: 'transparent', border: 'none', color: 'var(--text-main)', outline: 'none', cursor: 'text', width: '100%', fontSize: '0.95rem' }}
+                />
               </div>
               <div style={{ background: 'var(--hover-bg)', padding: '0.75rem', borderRadius: '8px' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Team Size</div>
-                <div style={{ fontWeight: '600', marginTop: '0.2rem' }}>{hackathon.teamSize} Members</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <input 
+                    type="number" 
+                    defaultValue={hackathon.teamSize}
+                    min="1" max="99"
+                    onBlur={(e) => handleHackathonUpdate(hackathon.id, { teamSize: parseInt(e.target.value) || hackathon.teamSize })}
+                    style={{ fontWeight: '600', background: 'transparent', border: 'none', color: 'var(--text-main)', outline: 'none', cursor: 'text', width: '40px', fontSize: '0.95rem' }}
+                  />
+                  <span style={{ fontWeight: '600' }}>Members</span>
+                </div>
               </div>
             </div>
 
             <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Important Links:</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {hackathon.links.map((link, i) => (
-                <span key={i} style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                  fontSize: '0.8rem', padding: '0.25rem 0.75rem', 
-                  background: 'rgba(14, 165, 233, 0.1)', color: '#38bdf8',
-                  borderRadius: '999px', cursor: 'pointer', border: '1px solid rgba(14, 165, 233, 0.2)'
-                }}>
-                  {link} <ExternalLink size={12} />
-                </span>
-              ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+              {hackathon.links.map((link, i) => {
+                const linkObj = typeof link === 'object' ? link : { label: link, url: '' };
+                return (
+                  <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0.25rem 0.75rem', background: 'rgba(14, 165, 233, 0.1)', color: '#38bdf8', borderRadius: '999px', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
+                    {linkObj.url ? (
+                      <a href={linkObj.url} target="_blank" rel="noreferrer" style={{ color: '#38bdf8', textDecoration: 'none' }}>{linkObj.label}</a>
+                    ) : (
+                      <span>{linkObj.label}</span>
+                    )}
+                    <button 
+                      onClick={() => {
+                        const newUrl = window.prompt(`Enter URL for "${linkObj.label}":`, linkObj.url || '');
+                        if (newUrl !== null) {
+                          const newLinks = hackathon.links.map((l, li) => li === i ? { label: linkObj.label, url: newUrl } : (typeof l === 'object' ? l : { label: l, url: '' }));
+                          handleHackathonUpdate(hackathon.id, { links: newLinks });
+                        }
+                      }}
+                      style={{ background: 'transparent', border: 'none', color: linkObj.url ? '#10b981' : '#38bdf8', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      title={linkObj.url ? "Update URL" : "Add URL"}
+                    >
+                      <ExternalLink size={11} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
+
+            <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Sub-Tasks:</h4>
+            <ul className="task-list" style={{ marginTop: 0 }}>
+              {hackathon.tasks.map((task, i) => {
+                const isCompleted = typeof task === 'object' ? task.completed : false;
+                const taskText = typeof task === 'object' ? task.text : task;
+                return (
+                <li className="task-item" key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div 
+                    style={{ cursor: 'pointer', marginTop: '2px', color: isCompleted ? '#10b981' : 'var(--text-muted)', flexShrink: 0 }}
+                    onClick={() => {
+                      const newTasks = [...hackathon.tasks];
+                      newTasks[i] = { text: taskText, completed: !isCompleted };
+                      handleHackathonUpdate(hackathon.id, { tasks: newTasks });
+                    }}
+                  >
+                    {isCompleted ? <CheckCircle2 size={16} /> : <div style={{ width: '16px', height: '16px', border: '1.5px solid currentColor', borderRadius: '4px' }}></div>}
+                  </div>
+                  <span style={{ fontSize: '0.9rem', textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }}>{taskText}</span>
+                  <button 
+                    onClick={() => handleHackathonUpdate(hackathon.id, { tasks: hackathon.tasks.filter((_, ti) => ti !== i) })}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--status-deadline)', cursor: 'pointer', marginLeft: 'auto', padding: '0 0.2rem' }}
+                    title="Remove Task"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </li>
+              )})}
+            </ul>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.target.elements.hackTaskInput;
+                if(input.value.trim()) {
+                   handleHackathonUpdate(hackathon.id, { tasks: [...hackathon.tasks, { text: input.value.trim(), completed: false }] });
+                   input.value = '';
+                }
+            }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input name="hackTaskInput" placeholder="Add a new task..." style={{ flexGrow: 1, padding: '0.4rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }} />
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.6rem' }}><Plus size={14}/></button>
+            </form>
+
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Notes & Remarks:</h4>
+              <textarea 
+                defaultValue={hackathon.notes || ''}
+                onBlur={(e) => handleHackathonUpdate(hackathon.id, { notes: e.target.value })}
+                placeholder="Add important points/remarks here..."
+                rows={2}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', resize: 'vertical', outline: 'none' }}
+              />
+            </div>
+
+            {hackathon.tasks.length > 0 && (
+              <div className="progress-wrapper" style={{ marginTop: '1.5rem' }}>
+                <div className="progress-meta">
+                  <span>Task Progress</span>
+                  <span>{hackProgress}%</span>
+                </div>
+                <div className="progress-bar-bg">
+                  <div className="progress-bar-fill" style={{ width: `${hackProgress}%`, transition: 'width 0.3s ease' }}></div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="card-footer">
-             <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Manage Registration & Dashboard</button>
+            {hackathon.hackathonLink ? (
+              <a href={hackathon.hackathonLink} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}>Manage Registration & Dashboard</a>
+            ) : (
+              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Manage Registration & Dashboard</button>
+            )}
           </div>
         </div>
-      ))}
+      )})}
       </div>
     </div>
   );
@@ -620,126 +1034,143 @@ export default function App() {
   };
 
   const renderCustomSection = (section) => {
-    const tasks = customTasks[section.id] || [];
-    const completedCount = tasks.filter(t => t.completed).length;
-    const progress = tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
+    const projects = customProjects[section.id] || [];
 
     return (
-      <div className="glass data-card animate-fade-in stagger-1" style={{ padding: '2rem', minHeight: '600px' }}>
-        <div className="card-header" style={{ marginBottom: '2rem' }}>
-          <div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <h2 className="card-title text-gradient" style={{ fontSize: '2rem' }}>{section.label}</h2>
-              <Edit2 size={16} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => openModal('EDIT_PROJECT', section, { hasDate: true, hasDesc: true })} />
-            </div>
-            <div className="card-org" style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
-              {section.description || "Manage phases and tasks for this specific project."}
-              {section.date && <span style={{ marginLeft: '1rem', color: 'var(--status-pending)' }}><Clock size={14} style={{ display: 'inline', marginBottom: '-2px' }}/> Deadline: {section.date}</span>}
-            </div>
-          </div>
-          <button className="btn btn-outline" style={{ color: 'var(--status-deadline)', borderColor: 'var(--status-deadline)' }} onClick={() => handleDeleteSection(section.id)}>
-            <Trash2 size={16} /> Delete Project
-          </button>
-        </div>
-
-        <div className="progress-wrapper" style={{ marginBottom: '2rem' }}>
-          <div className="progress-meta">
-            <span>Project Completion</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="progress-bar-bg" style={{ height: '8px' }}>
-             <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+      <div className="animate-fade-in stagger-1">
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-main)' }}>{section.label} Projects</h2>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button className="btn btn-outline" style={{ color: 'var(--status-deadline)', borderColor: 'var(--status-deadline)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => handleDeleteSection(section.id)}>
+              <Trash2 size={14} /> Delete Section
+            </button>
+            <button className="btn btn-primary" onClick={() => openModal('ADD_PROJECT', null, { hasDate: true, hasDesc: true })}>
+              <PlusCircle size={16} /> Add Project
+            </button>
           </div>
         </div>
 
-        <ul className="task-list" style={{ marginBottom: '2rem' }}>
-          {tasks.map(task => (
-            <li key={task.id} className="task-item" style={{ fontSize: '1.05rem', padding: '1rem', background: 'var(--hover-bg)', borderRadius: '8px', marginBottom: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <div style={{ cursor: 'pointer', marginTop: '2px' }} onClick={() => toggleTask(section.id, task.id)}>
-                  {task.completed ? 
-                     <CheckCircle2 size={20} style={{ color: 'var(--status-active)' }} /> : 
-                     <div style={{ width: '20px', height: '20px', border: '2px solid var(--text-muted)', borderRadius: '50%' }}></div>
-                  }
+        {projects.length === 0 && (
+          <div className="glass data-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>No projects yet in <strong>{section.label}</strong>.</p>
+            <button className="btn btn-primary" onClick={() => openModal('ADD_PROJECT', null, { hasDate: true, hasDesc: true })}>
+              <PlusCircle size={16} /> Add Your First Project
+            </button>
+          </div>
+        )}
+
+        <div className="section-grid">
+          {projects.map((project, idx) => {
+            const completedTasks = project.tasks.filter(t => t.completed).length;
+            const progress = project.tasks.length === 0 ? 0 : Math.round((completedTasks / project.tasks.length) * 100);
+            return (
+            <div className={`glass data-card animate-fade-in stagger-${(idx % 4) + 1}`} key={project.id}>
+              <div className="card-header">
+                <div style={{ paddingRight: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <h3 className="card-title" style={{ lineHeight: '1.2' }}>{project.title}</h3>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button 
+                      onClick={() => openModal('EDIT_PROJECT_CARD', null, { hasDate: true, hasDesc: true, sectionId: section.id, projectId: project.id, data: project })}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      title="Edit Project"
+                    >
+                      <Edit2 size={16} style={{ color: 'var(--text-muted)' }} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteProject(section.id, project.id)}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      title="Delete Project"
+                    >
+                      <Trash2 size={16} style={{ color: 'var(--status-deadline)' }} />
+                    </button>
+                  </div>
+                  {project.description && <div className="card-org" style={{ marginTop: '0.2rem', color: 'var(--text-muted)' }}>{project.description}</div>}
+                  {project.date && <div style={{ fontSize: '0.8rem', color: 'var(--status-pending)' }}>📅 Deadline: {project.date}</div>}
                 </div>
-                <div style={{ flexGrow: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span style={{ 
-                      textDecoration: task.completed ? 'line-through' : 'none', 
-                      opacity: task.completed ? 0.6 : 1,
-                      fontWeight: '500'
-                    }}>
-                      {task.text}
-                    </span>
-                    {task.priority && task.priority !== 'medium' && (
-                      <span style={{ 
-                        fontSize: '0.7rem', 
-                        padding: '0.2rem 0.4rem', 
-                        borderRadius: '4px',
-                        background: task.priority === 'high' ? 'var(--status-deadline)' : task.priority === 'low' ? 'var(--status-pending)' : 'var(--status-active)',
-                        color: 'white',
-                        textTransform: 'uppercase'
-                      }}>
-                        {task.priority}
-                      </span>
-                    )}
+                <select 
+                  className={`badge ${project.status}`}
+                  value={project.status}
+                  onChange={(e) => handleProjectUpdate(section.id, project.id, { status: e.target.value })}
+                  style={{ 
+                    padding: '0.2rem 0.5rem', outline: 'none', border: '1px solid var(--panel-border)', 
+                    background: 'var(--sidebar-bg)', cursor: 'pointer', appearance: 'none', minWidth: '90px', textAlign: 'center', fontWeight: 'bold',
+                    color: project.status === 'completed' ? '#10b981' : project.status === 'pending' ? '#eab308' : '#10b981'
+                  }}
+                >
+                  <option value="active" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>ACTIVE</option>
+                  <option value="pending" style={{ background: 'var(--bg-dark)', color: '#eab308' }}>PENDING</option>
+                  <option value="completed" style={{ background: 'var(--bg-dark)', color: '#10b981' }}>COMPLETED</option>
+                </select>
+              </div>
+
+              <div className="card-body">
+                <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Sub-Tasks:</h4>
+                <ul className="task-list" style={{ marginTop: 0 }}>
+                  {project.tasks.map((task, i) => {
+                    const isCompleted = task.completed;
+                    return (
+                    <li className="task-item" key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                      <div 
+                        style={{ cursor: 'pointer', marginTop: '2px', color: isCompleted ? '#10b981' : 'var(--text-muted)', flexShrink: 0 }}
+                        onClick={() => {
+                          const newTasks = [...project.tasks];
+                          newTasks[i] = { ...task, completed: !isCompleted };
+                          handleProjectUpdate(section.id, project.id, { tasks: newTasks });
+                        }}
+                      >
+                        {isCompleted ? <CheckCircle2 size={16} /> : <div style={{ width: '16px', height: '16px', border: '1.5px solid currentColor', borderRadius: '4px' }}></div>}
+                      </div>
+                      <span style={{ fontSize: '0.9rem', textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }}>{task.text}</span>
+                      <button 
+                        onClick={() => handleProjectUpdate(section.id, project.id, { tasks: project.tasks.filter((_, ti) => ti !== i) })}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--status-deadline)', cursor: 'pointer', marginLeft: 'auto', padding: '0 0.2rem' }}
+                        title="Remove Task"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </li>
+                  )})}
+                </ul>
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const input = e.target.elements.projTaskInput;
+                    if(input.value.trim()) {
+                       handleProjectUpdate(section.id, project.id, { tasks: [...project.tasks, { text: input.value.trim(), completed: false }] });
+                       input.value = '';
+                    }
+                }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <input name="projTaskInput" placeholder="Add a new task..." style={{ flexGrow: 1, padding: '0.4rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }} />
+                  <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.6rem' }}><Plus size={14}/></button>
+                </form>
+
+                <div style={{ marginTop: '1rem' }}>
+                  <h4 style={{fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem'}}>Notes & Remarks:</h4>
+                  <textarea 
+                    defaultValue={project.notes || ''}
+                    onBlur={(e) => handleProjectUpdate(section.id, project.id, { notes: e.target.value })}
+                    placeholder="Add important points/remarks here..."
+                    rows={2}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', fontSize: '0.8rem', resize: 'vertical', outline: 'none' }}
+                  />
+                </div>
+
+                <div className="progress-wrapper" style={{ marginTop: '1.5rem' }}>
+                  <div className="progress-meta">
+                    <span>Project Completion</span>
+                    <span>{progress}%</span>
                   </div>
-                  
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    {task.dueDate && (
-                      <span>📅 {task.dueDate}</span>
-                    )}
-                    {task.tags && task.tags.length > 0 && (
-                      <span>🏷️ {task.tags.join(', ')}</span>
-                    )}
-                    {task.status && task.status !== 'pending' && (
-                      <span style={{ 
-                        color: task.status === 'completed' ? 'var(--status-active)' : 
-                               task.status === 'in-progress' ? 'var(--status-pending)' : 
-                               'var(--text-muted)'
-                      }}>
-                        ● {task.status.replace('-', ' ')}
-                      </span>
-                    )}
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill" style={{ width: `${progress}%`, transition: 'width 0.3s ease' }}></div>
                   </div>
-                  
-                  {task.notes && (
-                    <div style={{ 
-                      fontSize: '0.85rem', 
-                      color: 'var(--text-muted)', 
-                      marginTop: '0.5rem',
-                      padding: '0.5rem',
-                      background: 'var(--panel-bg)',
-                      borderRadius: '4px',
-                      borderLeft: '3px solid var(--accent-gradient)'
-                    }}>
-                      {task.notes}
-                    </div>
-                  )}
                 </div>
               </div>
-            </li>
-          ))}
-          {tasks.length === 0 && <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No tasks added yet. Start planning!</div>}
-        </ul>
-
-        <form onSubmit={(e) => handleAddTask(section.id, e)} style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
-          <input 
-            type="text" 
-            value={newTaskText}
-            onChange={(e) => setNewTaskText(e.target.value)}
-            placeholder={`Add a new task to ${section.label}...`}
-             style={{ 
-               flexGrow: 1, padding: '1rem', borderRadius: '8px', 
-               background: 'var(--panel-bg)', color: 'var(--text-main)', 
-               border: '1px solid var(--panel-border)', outline: 'none' 
-             }}
-          />
-          <button type="submit" className="btn btn-primary" style={{ padding: '0 2rem' }}>Add Task</button>
-        </form>
+            </div>
+          )})}
+        </div>
       </div>
     );
   };
+
 
   return (
     <div className="app-container">
@@ -787,10 +1218,32 @@ export default function App() {
       <main className="main-content">
         <header className="page-header animate-fade-in">
           <div>
-            <h1 className="page-title text-gradient">
-              {navItems.find(i => i.id === activeTab)?.label}
-            </h1>
-            <p className="page-subtitle">Manage your immersive workload and conquer deadlines.</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+              {tabLinks[activeTab] ? (
+                <a href={tabLinks[activeTab]} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                  <h1 className="page-title text-gradient hover-underline" style={{ cursor: 'pointer', marginBottom: 0 }}>
+                    {navItems.find(i => i.id === activeTab)?.label}
+                  </h1>
+                </a>
+              ) : (
+                <h1 className="page-title text-gradient" style={{ marginBottom: 0 }}>
+                  {navItems.find(i => i.id === activeTab)?.label}
+                </h1>
+              )}
+              <button 
+                onClick={() => {
+                  const newLink = window.prompt("Enter the link URL for this section:", tabLinks[activeTab] || "");
+                  if (newLink !== null) {
+                     setTabLinks(prev => ({ ...prev, [activeTab]: newLink }));
+                  }
+                }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', marginTop: '0.8rem' }}
+                title={tabLinks[activeTab] ? "Update Link" : "Add Link"}
+              >
+                <ExternalLink size={24} style={{ color: tabLinks[activeTab] ? '#10b981' : 'var(--text-muted)', transition: 'color 0.2s' }} />
+              </button>
+            </div>
+            <p className="page-subtitle" style={{ marginTop: '0.5rem' }}>Manage your immersive workload and conquer deadlines.</p>
           </div>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
